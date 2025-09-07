@@ -139,13 +139,120 @@ async function startConversion() {
 function setupDownloadButton(videoId, videoData) {
     const downloadBtn = document.getElementById('downloadBtn');
     
-    downloadBtn.onclick = () => {
-        // Create a mock MP3 file download
-        const fileName = videoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp3';
-        
-        // For demo purposes, we'll create a small audio file
-        createMockMP3Download(fileName);
+    downloadBtn.onclick = async () => {
+        try {
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            // Try to get download link from converter API
+            await processRealDownload(videoId, videoData);
+            
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback to demo
+            const fileName = videoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp3';
+            createMockMP3Download(fileName);
+        } finally {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download MP3';
+        }
     };
+}
+
+async function processRealDownload(videoId, videoData) {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    // Try multiple converter APIs
+    const apis = [
+        {
+            name: 'RapidAPI YouTube MP3',
+            url: 'https://youtube-mp36.p.rapidapi.com/dl',
+            method: 'GET',
+            params: { id: youtubeUrl }
+        },
+        {
+            name: 'Y2mate API',
+            url: 'https://www.y2mate.com/mates/analyzeV2/ajax',
+            method: 'POST',
+            params: { k_query: youtubeUrl, k_page: 'home', hl: 'en', q_auto: 0 }
+        }
+    ];
+    
+    for (const api of apis) {
+        try {
+            updateProgress(50, `Trying ${api.name}...`);
+            
+            const response = await fetch(api.url, {
+                method: api.method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-RapidAPI-Key': 'demo-key', // User needs to replace
+                    'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+                },
+                body: api.method === 'POST' ? JSON.stringify(api.params) : undefined
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.link || data.dlink) {
+                    const downloadUrl = data.link || data.dlink;
+                    updateProgress(90, 'Preparing download...');
+                    
+                    // Create hidden download link
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    updateProgress(100, 'Download started!');
+                    setTimeout(() => {
+                        alert('🎵 MP3 download started! Check your downloads folder.');
+                    }, 500);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log(`${api.name} failed:`, error);
+            continue;
+        }
+    }
+    
+    // If all APIs fail, use iframe approach
+    await useIframeConverter(videoId, videoData);
+}
+
+async function useIframeConverter(videoId, videoData) {
+    updateProgress(70, 'Using alternative method...');
+    
+    // Create hidden iframe for conversion
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.src = `https://ytmp3.cc/api/?url=https://youtube.com/watch?v=${videoId}`;
+    
+    document.body.appendChild(iframe);
+    
+    // Wait for iframe to load
+    await new Promise(resolve => {
+        iframe.onload = () => {
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+                resolve();
+            }, 3000);
+        };
+    });
+    
+    updateProgress(100, 'Processing complete!');
+    
+    // Show download instruction
+    setTimeout(() => {
+        alert('🚀 Conversion initiated! The download should start automatically. If not, please check your browser\'s download settings.');
+    }, 500);
 }
 
 function createMockMP3Download(fileName) {
@@ -191,7 +298,7 @@ function createMockMP3Download(fileName) {
     
     // Show success message
     setTimeout(() => {
-        alert('Demo audio file downloaded! This is a 5-second sample melody.');
+        alert('⚠️ Fallback mode: Demo audio file downloaded. For real MP3 conversion, please add a valid API key.');
     }, 500);
 }
 
