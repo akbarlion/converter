@@ -140,22 +140,34 @@ function setupDownloadButton(videoId, videoData) {
     const downloadBtn = document.getElementById('downloadBtn');
     
     downloadBtn.onclick = async () => {
-        try {
-            downloadBtn.disabled = true;
-            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            
-            // Try to get download link from converter API
-            await processRealDownload(videoId, videoData);
-            
-        } catch (error) {
-            console.error('Download failed:', error);
-            // Fallback to demo
-            const fileName = videoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp3';
-            createMockMP3Download(fileName);
-        } finally {
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download MP3';
-        }
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        updateProgress(50, 'Preparing download...');
+        
+        // Direct approach - use our API endpoint that redirects
+        const downloadUrl = `/api/convert?videoId=${videoId}`;
+        
+        updateProgress(80, 'Initiating download...');
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        updateProgress(100, 'Download initiated!');
+        
+        setTimeout(() => {
+            alert('🎵 Download started! If it doesn\'t work, the converter will open in a new tab.');
+        }, 1000);
+        
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download MP3';
     };
 }
 
