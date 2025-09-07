@@ -160,200 +160,74 @@ function setupDownloadButton(videoId, videoData) {
 }
 
 async function processRealDownload(videoId, videoData) {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    
-    // Try multiple background APIs
-    const apis = [
-        {
-            name: 'Cobalt Tools',
-            process: () => tryCobaltAPI(youtubeUrl, videoData)
-        },
-        {
-            name: 'SaveFrom API',
-            process: () => trySaveFromAPI(videoId, videoData)
-        },
-        {
-            name: 'Y2Mate Background',
-            process: () => tryY2MateAPI(youtubeUrl, videoData)
-        }
-    ];
-    
-    for (const api of apis) {
-        try {
-            updateProgress(30, `Trying ${api.name}...`);
-            const result = await api.process();
-            if (result) return; // Success, exit
-        } catch (error) {
-            console.log(`${api.name} failed:`, error);
-            continue;
-        }
-    }
-    
-    // All APIs failed, use fallback
-    await useBackgroundConverter(videoId, videoData);
-}
-
-async function tryCobaltAPI(youtubeUrl, videoData) {
-    const response = await fetch('https://co.wuk.sh/api/json', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            url: youtubeUrl,
-            vCodec: 'h264',
-            vQuality: '720',
-            aFormat: 'mp3',
-            isAudioOnly: true
-        })
-    });
-    
-    if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'success' && data.url) {
-            updateProgress(90, 'Downloading MP3...');
-            await downloadFile(data.url, `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`);
-            return true;
-        }
-    }
-    return false;
-}
-
-async function trySaveFromAPI(videoId, videoData) {
-    updateProgress(50, 'Extracting audio...');
-    
-    const response = await fetch(`https://api.savefrom.net/info?url=https://youtube.com/watch?v=${videoId}`, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-    });
-    
-    if (response.ok) {
-        const text = await response.text();
-        // Parse response for download links
-        const audioMatch = text.match(/"url":"([^"]*)","type":"audio\/mp4"/);;
+    try {
+        updateProgress(30, 'Connecting to server...');
         
-        if (audioMatch && audioMatch[1]) {
-            const audioUrl = audioMatch[1].replace(/\\u0026/g, '&');
-            updateProgress(90, 'Downloading MP3...');
-            await downloadFile(audioUrl, `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`);
-            return true;
-        }
-    }
-    return false;
-}
-
-async function tryY2MateAPI(youtubeUrl, videoData) {
-    updateProgress(60, 'Processing with Y2Mate...');
-    
-    // First, analyze the video
-    const analyzeResponse = await fetch('https://www.y2mate.com/mates/analyzeV2/ajax', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            k_query: youtubeUrl,
-            k_page: 'home',
-            hl: 'en',
-            q_auto: 0
-        })
-    });
-    
-    if (analyzeResponse.ok) {
-        const data = await analyzeResponse.json();
-        if (data.status === 'ok' && data.links && data.links.mp3) {
-            const mp3Options = Object.values(data.links.mp3);
-            if (mp3Options.length > 0) {
-                const bestQuality = mp3Options[0]; // Get first available quality
+        // Try our own serverless function first
+        const serverResponse = await fetch(`/api/convert?videoId=${videoId}`);
+        
+        if (serverResponse.ok) {
+            updateProgress(60, 'Converting to MP3...');
+            
+            // Get the blob from response
+            const blob = await serverResponse.blob();
+            
+            if (blob.size > 1000) { // Check if we got actual content
+                updateProgress(90, 'Preparing download...');
                 
-                // Convert the video
-                const convertResponse = await fetch('https://www.y2mate.com/mates/convertV2/ajax', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        vid: data.vid,
-                        k: bestQuality.k
-                    })
-                });
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
                 
-                if (convertResponse.ok) {
-                    const convertData = await convertResponse.json();
-                    if (convertData.status === 'ok' && convertData.dlink) {
-                        updateProgress(90, 'Downloading MP3...');
-                        await downloadFile(convertData.dlink, `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`);
-                        return true;
-                    }
-                }
+                updateProgress(100, 'Download complete!');
+                setTimeout(() => {
+                    alert('🎵 MP3 downloaded successfully! Check your downloads folder.');
+                }, 500);
+                return;
             }
         }
-    }
-    return false;
-}
-
-async function downloadFile(url, filename) {
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-        
-        updateProgress(100, 'Download complete!');
-        setTimeout(() => {
-            alert('🎵 MP3 downloaded successfully! Check your downloads folder.');
-        }, 500);
-        
     } catch (error) {
-        throw new Error('Download failed');
+        console.log('Server conversion failed:', error);
     }
+    
+    // Fallback to alternative method
+    await useAlternativeDownload(videoId, videoData);
 }
 
-async function useBackgroundConverter(videoId, videoData) {
-    updateProgress(80, 'Using background processor...');
+async function useAlternativeDownload(videoId, videoData) {
+    updateProgress(70, 'Trying alternative method...');
     
-    // Create hidden iframe for background processing
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.style.position = 'absolute';
-    iframe.style.left = '-9999px';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
-    
-    // Use a converter that works in iframe
+    // Create a simple redirect approach as last resort
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    iframe.src = `https://loader.to/api/button/?f=mp3&color=ff6900&url=${encodeURIComponent(youtubeUrl)}`;
     
-    document.body.appendChild(iframe);
+    // Show user a choice
+    const userChoice = confirm('🚀 Server conversion unavailable. Would you like to:\n\n• OK: Open converter in new tab\n• Cancel: Download demo file');
     
-    updateProgress(95, 'Processing in background...');
-    
-    // Wait for processing
-    await new Promise(resolve => {
+    if (userChoice) {
+        // Open converter in new tab
+        const converterUrl = `https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`;
+        window.open(converterUrl, '_blank');
+        
+        updateProgress(100, 'Converter opened!');
         setTimeout(() => {
-            document.body.removeChild(iframe);
-            resolve();
-        }, 5000);
-    });
-    
-    updateProgress(100, 'Background processing complete!');
-    
-    setTimeout(() => {
-        alert('⚠️ Background processing completed, but download may require manual action. Trying fallback method...');
-        // Fallback to demo if all else fails
+            alert('🎵 Converter opened in new tab! Click "Download" to get your MP3.');
+        }, 500);
+    } else {
+        // Download demo file
+        updateProgress(100, 'Preparing demo file...');
         const fileName = videoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp3';
         createMockMP3Download(fileName);
-    }, 1000);
+    }
 }
+
+
 
 function createMockMP3Download(fileName) {
     // Create a proper MP3 file with audio content
