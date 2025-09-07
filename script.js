@@ -18,8 +18,30 @@ function extractVideoId(url) {
     return match ? match[1] : null;
 }
 
-function showVideoInfo(videoId) {
-    // Use real YouTube thumbnail but mock data for demo
+async function showVideoInfo(videoId) {
+    try {
+        // Try to get real video info from YouTube oEmbed API
+        const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            const videoData = {
+                title: data.title,
+                duration: 'Loading...', // oEmbed doesn't provide duration
+                thumbnail: data.thumbnail_url
+            };
+            
+            document.getElementById('thumbnail').src = videoData.thumbnail;
+            document.getElementById('videoTitle').textContent = videoData.title;
+            document.getElementById('videoDuration').textContent = `Duration: ${videoData.duration}`;
+            document.getElementById('videoInfo').classList.remove('hidden');
+            return videoData;
+        }
+    } catch (error) {
+        console.log('oEmbed failed, using fallback');
+    }
+    
+    // Fallback to mock data with real thumbnail
     const videoData = {
         title: mockVideos[videoId]?.title || 'YouTube Video',
         duration: mockVideos[videoId]?.duration || '4:20',
@@ -29,7 +51,6 @@ function showVideoInfo(videoId) {
     document.getElementById('thumbnail').src = videoData.thumbnail;
     document.getElementById('videoTitle').textContent = videoData.title;
     document.getElementById('videoDuration').textContent = `Duration: ${videoData.duration}`;
-    
     document.getElementById('videoInfo').classList.remove('hidden');
     return videoData;
 }
@@ -128,14 +149,41 @@ function setupDownloadButton(videoId, videoData) {
 }
 
 function createMockMP3Download(fileName) {
-    // Create a simple demo download
-    const blob = new Blob(['Demo MP3 content - This is a prototype'], { type: 'audio/mpeg' });
+    // Create a proper MP3 file with audio content
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const sampleRate = 44100;
+    const duration = 5; // 5 seconds
+    const numSamples = sampleRate * duration;
+    
+    // Create stereo buffer
+    const buffer = audioContext.createBuffer(2, numSamples, sampleRate);
+    
+    // Generate a simple melody
+    for (let channel = 0; channel < 2; channel++) {
+        const channelData = buffer.getChannelData(channel);
+        for (let i = 0; i < numSamples; i++) {
+            const time = i / sampleRate;
+            // Create a simple melody with multiple frequencies
+            const freq1 = 440; // A note
+            const freq2 = 554.37; // C# note
+            const freq3 = 659.25; // E note
+            
+            channelData[i] = 
+                Math.sin(2 * Math.PI * freq1 * time) * 0.1 +
+                Math.sin(2 * Math.PI * freq2 * time) * 0.1 +
+                Math.sin(2 * Math.PI * freq3 * time) * 0.1;
+        }
+    }
+    
+    // Convert to WAV format (playable audio)
+    const wavBuffer = audioBufferToWav(buffer);
+    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
     
     // Create download link
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName;
+    a.download = fileName.replace('.mp3', '.wav'); // Use WAV extension
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -143,8 +191,50 @@ function createMockMP3Download(fileName) {
     
     // Show success message
     setTimeout(() => {
-        alert('Demo file downloaded! In a real implementation, this would be the actual MP3 file.');
+        alert('Demo audio file downloaded! This is a 5-second sample melody.');
     }, 500);
+}
+
+// Helper function to convert AudioBuffer to WAV
+function audioBufferToWav(buffer) {
+    const length = buffer.length;
+    const numberOfChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    const writeString = (offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * numberOfChannels * 2, true);
+    
+    // Convert float samples to 16-bit PCM
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+            const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+            view.setInt16(offset, sample * 0x7FFF, true);
+            offset += 2;
+        }
+    }
+    
+    return arrayBuffer;
 }
 
 // Reset form when URL input changes
