@@ -1,7 +1,7 @@
 // API Configuration
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3000/api' 
-    : 'https://your-vercel-app.vercel.app/api'; // Replace with your Vercel URL
+    : '/api'; // Use relative path for Vercel
 
 function extractVideoId(url) {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -11,7 +11,7 @@ function extractVideoId(url) {
 
 async function showVideoInfo(videoId) {
     try {
-        const response = await fetch(`${API_BASE}/info/${videoId}`);
+        const response = await fetch(`${API_BASE}/info?videoId=${videoId}`);
         const videoData = await response.json();
         
         if (response.ok) {
@@ -129,7 +129,7 @@ function setupDownloadButton(videoId, videoData) {
             downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
             
             // Try real download first
-            const downloadUrl = `${API_BASE}/download/${videoId}`;
+            const downloadUrl = `${API_BASE}/download?videoId=${videoId}`;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
