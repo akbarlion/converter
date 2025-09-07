@@ -164,31 +164,8 @@ function showConverterFrame(videoId) {
     // Hide main content footer
     mainFooter.style.display = 'none';
     
-    // Set iframe source to converter that allows embedding
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const converterUrl = `https://loader.to/api/button/?f=mp3&color=ff6900&url=${encodeURIComponent(youtubeUrl)}`;
-    
-    // Try multiple converters that support iframe
-    const converters = [
-        `https://www.mp3juices.cc/search/${encodeURIComponent(videoId)}`,
-        `https://320ytmp3.com/en1/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`,
-        `https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`
-    ];
-    
-    // Try first converter
-    converterIframe.src = converters[0];
-    
-    // If iframe fails to load, try next converter
-    let currentConverter = 0;
-    converterIframe.onerror = () => {
-        currentConverter++;
-        if (currentConverter < converters.length) {
-            converterIframe.src = converters[currentConverter];
-        } else {
-            // All failed, show manual option
-            showManualConverter(videoId);
-        }
-    };
+    // Skip iframe, directly show manual converter
+    showManualConverter(videoId);
     
     // Show converter frame
     converterFrame.classList.remove('hidden');
@@ -197,7 +174,7 @@ function showConverterFrame(videoId) {
     closeBtn.onclick = () => {
         converterFrame.classList.add('hidden');
         mainFooter.style.display = 'block';
-        converterIframe.src = ''; // Clear iframe
+        converterIframe.srcdoc = ''; // Clear iframe
     };
     
     // Close on Escape key
@@ -213,28 +190,80 @@ function showManualConverter(videoId) {
     const converterIframe = document.getElementById('converterIframe');
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    // Create manual converter HTML
+    // Create manual converter HTML with working buttons
     const manualHTML = `
-        <div style="padding: 40px; text-align: center; background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); color: #e0e6ed; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #00d4ff; margin-bottom: 20px;"><i class="fas fa-rocket"></i> ION's Space Converter</h2>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <style>
+                body {
+                    margin: 0;
+                    padding: 40px;
+                    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+                    color: #e0e6ed;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .container {
+                    max-width: 600px;
+                    text-align: center;
+                }
+                h2 {
+                    color: #00d4ff;
+                    margin-bottom: 20px;
+                    text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+                }
+                .converter-btn {
+                    display: block;
+                    background: linear-gradient(45deg, #00d4ff, #ff6b9d);
+                    color: white;
+                    padding: 15px 25px;
+                    text-decoration: none;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    margin: 15px 0;
+                    transition: all 0.3s;
+                    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+                }
+                .converter-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+                }
+                .converter-btn:nth-child(even) {
+                    background: linear-gradient(45deg, #ff6b9d, #00d4ff);
+                }
+                p {
+                    color: #a0a9c0;
+                    font-size: 0.9rem;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2><i class="fas fa-rocket"></i> ION's Space Converter</h2>
                 <p style="margin-bottom: 30px; font-size: 1.1rem;">Choose your preferred converter:</p>
                 
-                <div style="display: grid; gap: 15px; margin-bottom: 30px;">
-                    <a href="https://www.y2mate.com/youtube/${videoId}" target="_blank" style="background: linear-gradient(45deg, #00d4ff, #ff6b9d); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <i class="fas fa-download"></i> Y2mate Converter
-                    </a>
-                    <a href="https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}" target="_blank" style="background: linear-gradient(45deg, #ff6b9d, #00d4ff); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <i class="fas fa-music"></i> YTMP3 Converter
-                    </a>
-                    <a href="https://www.mp3juices.cc/search/${encodeURIComponent(videoId)}" target="_blank" style="background: linear-gradient(45deg, #00d4ff, #ff6b9d); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <i class="fas fa-headphones"></i> MP3 Juices
-                    </a>
-                </div>
+                <a href="https://www.y2mate.com/youtube/${videoId}" target="_blank" class="converter-btn">
+                    <i class="fas fa-download"></i> Y2mate Converter
+                </a>
+                <a href="https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}" target="_blank" class="converter-btn">
+                    <i class="fas fa-music"></i> YTMP3 Converter
+                </a>
+                <a href="https://www.mp3juices.cc/search/${encodeURIComponent(videoId)}" target="_blank" class="converter-btn">
+                    <i class="fas fa-headphones"></i> MP3 Juices
+                </a>
                 
-                <p style="color: #a0a9c0; font-size: 0.9rem;">Click any converter above to download your MP3 file</p>
+                <p>Click any converter above to download your MP3 file</p>
+                <p><i class="fas fa-info-circle"></i> Links will open in new tabs</p>
             </div>
-        </div>
+        </body>
+        </html>
     `;
     
     // Set iframe content to manual converter
