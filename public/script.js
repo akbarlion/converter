@@ -164,10 +164,31 @@ function showConverterFrame(videoId) {
     // Hide main content footer
     mainFooter.style.display = 'none';
     
-    // Set iframe source to converter
+    // Set iframe source to converter that allows embedding
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const converterUrl = `https://www.y2mate.com/youtube/${videoId}`;
-    converterIframe.src = converterUrl;
+    const converterUrl = `https://loader.to/api/button/?f=mp3&color=ff6900&url=${encodeURIComponent(youtubeUrl)}`;
+    
+    // Try multiple converters that support iframe
+    const converters = [
+        `https://www.mp3juices.cc/search/${encodeURIComponent(videoId)}`,
+        `https://320ytmp3.com/en1/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`,
+        `https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`
+    ];
+    
+    // Try first converter
+    converterIframe.src = converters[0];
+    
+    // If iframe fails to load, try next converter
+    let currentConverter = 0;
+    converterIframe.onerror = () => {
+        currentConverter++;
+        if (currentConverter < converters.length) {
+            converterIframe.src = converters[currentConverter];
+        } else {
+            // All failed, show manual option
+            showManualConverter(videoId);
+        }
+    };
     
     // Show converter frame
     converterFrame.classList.remove('hidden');
@@ -186,6 +207,38 @@ function showConverterFrame(videoId) {
             document.removeEventListener('keydown', escapeHandler);
         }
     });
+}
+
+function showManualConverter(videoId) {
+    const converterIframe = document.getElementById('converterIframe');
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    // Create manual converter HTML
+    const manualHTML = `
+        <div style="padding: 40px; text-align: center; background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); color: #e0e6ed; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #00d4ff; margin-bottom: 20px;"><i class="fas fa-rocket"></i> ION's Space Converter</h2>
+                <p style="margin-bottom: 30px; font-size: 1.1rem;">Choose your preferred converter:</p>
+                
+                <div style="display: grid; gap: 15px; margin-bottom: 30px;">
+                    <a href="https://www.y2mate.com/youtube/${videoId}" target="_blank" style="background: linear-gradient(45deg, #00d4ff, #ff6b9d); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <i class="fas fa-download"></i> Y2mate Converter
+                    </a>
+                    <a href="https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}" target="_blank" style="background: linear-gradient(45deg, #ff6b9d, #00d4ff); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <i class="fas fa-music"></i> YTMP3 Converter
+                    </a>
+                    <a href="https://www.mp3juices.cc/search/${encodeURIComponent(videoId)}" target="_blank" style="background: linear-gradient(45deg, #00d4ff, #ff6b9d); color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <i class="fas fa-headphones"></i> MP3 Juices
+                    </a>
+                </div>
+                
+                <p style="color: #a0a9c0; font-size: 0.9rem;">Click any converter above to download your MP3 file</p>
+            </div>
+        </div>
+    `;
+    
+    // Set iframe content to manual converter
+    converterIframe.srcdoc = manualHTML;
 }
 
 async function processRealDownload(videoId, videoData) {
