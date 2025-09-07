@@ -18,9 +18,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Video ID required' });
         }
         
-        // For now, return a redirect to a working converter
+        // Redirect to working converter services
         const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        const converterUrl = `https://ytmp3.cc/api/download/?url=${encodeURIComponent(youtubeUrl)}&format=mp3`;
+        const converterUrl = `https://www.y2mate.com/youtube/${videoId}`;
         
         // Redirect to converter service
         res.redirect(302, converterUrl);
