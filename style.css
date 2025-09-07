@@ -234,6 +234,67 @@ footer {
     opacity: 0.8;
 }
 
+.converter-frame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(12, 12, 12, 0.95);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.frame-header {
+    background: linear-gradient(45deg, #00d4ff, #ff6b9d);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.frame-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#converterIframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: white;
+}
+
+.frame-footer {
+    background: rgba(26, 26, 46, 0.9);
+    padding: 10px 20px;
+    text-align: center;
+    color: #a0a9c0;
+    border-top: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.frame-footer p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
 @media (max-width: 600px) {
     .input-section {
         flex-direction: column;
@@ -250,5 +311,13 @@ footer {
     
     header h1 {
         font-size: 2rem;
+    }
+    
+    .frame-header {
+        padding: 10px 15px;
+    }
+    
+    .frame-header h3 {
+        font-size: 1rem;
     }
 }

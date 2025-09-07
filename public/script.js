@@ -141,34 +141,51 @@ function setupDownloadButton(videoId, videoData) {
     
     downloadBtn.onclick = async () => {
         downloadBtn.disabled = true;
-        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Converter...';
         
-        updateProgress(50, 'Preparing download...');
+        updateProgress(50, 'Preparing converter...');
         
-        // Direct approach - use our API endpoint that redirects
-        const downloadUrl = `/api/convert?videoId=${videoId}`;
+        // Show iframe converter
+        showConverterFrame(videoId);
         
-        updateProgress(80, 'Initiating download...');
-        
-        // Create download link
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
-        link.target = '_blank';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        updateProgress(100, 'Download initiated!');
-        
-        setTimeout(() => {
-            alert('🎵 Download started! If it doesn\'t work, the converter will open in a new tab.');
-        }, 1000);
+        updateProgress(100, 'Converter ready!');
         
         downloadBtn.disabled = false;
         downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download MP3';
     };
+}
+
+function showConverterFrame(videoId) {
+    const converterFrame = document.getElementById('converterFrame');
+    const converterIframe = document.getElementById('converterIframe');
+    const closeBtn = document.getElementById('closeFrame');
+    const mainFooter = document.getElementById('mainFooter');
+    
+    // Hide main content footer
+    mainFooter.style.display = 'none';
+    
+    // Set iframe source to converter
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const converterUrl = `https://www.y2mate.com/youtube/${videoId}`;
+    converterIframe.src = converterUrl;
+    
+    // Show converter frame
+    converterFrame.classList.remove('hidden');
+    
+    // Setup close button
+    closeBtn.onclick = () => {
+        converterFrame.classList.add('hidden');
+        mainFooter.style.display = 'block';
+        converterIframe.src = ''; // Clear iframe
+    };
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+            closeBtn.click();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    });
 }
 
 async function processRealDownload(videoId, videoData) {
