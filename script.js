@@ -1,7 +1,16 @@
-// API Configuration
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:3000/api' 
-    : '/api'; // Use relative path for Vercel
+// Mock video data for demo
+const mockVideos = {
+    'dQw4w9WgXcQ': {
+        title: 'Rick Astley - Never Gonna Give You Up (Official Video)',
+        duration: '3:33',
+        thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
+    },
+    'default': {
+        title: 'Sample YouTube Video',
+        duration: '4:20',
+        thumbnail: 'https://via.placeholder.com/480x360/ff0000/ffffff?text=YouTube'
+    }
+};
 
 function extractVideoId(url) {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -9,34 +18,20 @@ function extractVideoId(url) {
     return match ? match[1] : null;
 }
 
-async function showVideoInfo(videoId) {
-    try {
-        const response = await fetch(`${API_BASE}/info?videoId=${videoId}`);
-        const videoData = await response.json();
-        
-        if (response.ok) {
-            document.getElementById('thumbnail').src = videoData.thumbnail;
-            document.getElementById('videoTitle').textContent = videoData.title;
-            document.getElementById('videoDuration').textContent = `Duration: ${videoData.duration}`;
-            document.getElementById('videoInfo').classList.remove('hidden');
-            return videoData;
-        } else {
-            throw new Error(videoData.error);
-        }
-    } catch (error) {
-        // Fallback to demo mode
-        const mockData = {
-            title: 'Sample YouTube Video',
-            duration: '4:20',
-            thumbnail: 'https://via.placeholder.com/480x360/ff0000/ffffff?text=YouTube'
-        };
-        
-        document.getElementById('thumbnail').src = mockData.thumbnail;
-        document.getElementById('videoTitle').textContent = mockData.title;
-        document.getElementById('videoDuration').textContent = `Duration: ${mockData.duration}`;
-        document.getElementById('videoInfo').classList.remove('hidden');
-        return mockData;
-    }
+function showVideoInfo(videoId) {
+    // Use real YouTube thumbnail but mock data for demo
+    const videoData = {
+        title: mockVideos[videoId]?.title || 'YouTube Video',
+        duration: mockVideos[videoId]?.duration || '4:20',
+        thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    };
+    
+    document.getElementById('thumbnail').src = videoData.thumbnail;
+    document.getElementById('videoTitle').textContent = videoData.title;
+    document.getElementById('videoDuration').textContent = `Duration: ${videoData.duration}`;
+    
+    document.getElementById('videoInfo').classList.remove('hidden');
+    return videoData;
 }
 
 function updateProgress(percentage, text) {
@@ -44,14 +39,14 @@ function updateProgress(percentage, text) {
     document.getElementById('progressText').textContent = text;
 }
 
-function simulateProgress() {
+function simulateConversion() {
     return new Promise((resolve) => {
         const steps = [
-            { progress: 20, text: 'Connecting to server...' },
-            { progress: 40, text: 'Fetching video data...' },
-            { progress: 60, text: 'Extracting audio stream...' },
-            { progress: 80, text: 'Preparing download...' },
-            { progress: 100, text: 'Ready to download!' }
+            { progress: 20, text: 'Fetching video information...' },
+            { progress: 40, text: 'Extracting audio stream...' },
+            { progress: 60, text: 'Converting to MP3...' },
+            { progress: 80, text: 'Optimizing audio quality...' },
+            { progress: 100, text: 'Conversion complete!' }
         ];
         
         let currentStep = 0;
@@ -64,7 +59,7 @@ function simulateProgress() {
                 clearInterval(interval);
                 resolve();
             }
-        }, 800);
+        }, 1000);
     });
 }
 
@@ -100,8 +95,8 @@ async function startConversion() {
         // Show progress section
         document.getElementById('progressSection').classList.remove('hidden');
         
-        // Simulate progress
-        await simulateProgress();
+        // Simulate conversion process
+        await simulateConversion();
         
         // Hide progress and show download
         document.getElementById('progressSection').classList.add('hidden');
@@ -123,44 +118,32 @@ async function startConversion() {
 function setupDownloadButton(videoId, videoData) {
     const downloadBtn = document.getElementById('downloadBtn');
     
-    downloadBtn.onclick = async () => {
-        try {
-            downloadBtn.disabled = true;
-            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
-            
-            // Try real download first
-            const downloadUrl = `${API_BASE}/download?videoId=${videoId}`;
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-        } catch (error) {
-            // Fallback to demo download
-            createMockMP3Download(videoData.title);
-        } finally {
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download MP3';
-        }
+    downloadBtn.onclick = () => {
+        // Create a mock MP3 file download
+        const fileName = videoData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp3';
+        
+        // For demo purposes, we'll create a small audio file
+        createMockMP3Download(fileName);
     };
 }
 
-function createMockMP3Download(title) {
-    // Fallback demo download
-    const blob = new Blob(['Demo MP3 content - Server not available'], { type: 'audio/mpeg' });
+function createMockMP3Download(fileName) {
+    // Create a simple demo download
+    const blob = new Blob(['Demo MP3 content - This is a prototype'], { type: 'audio/mpeg' });
+    
+    // Create download link
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${title.replace(/[^\w\s]/gi, '')}_demo.mp3`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
+    // Show success message
     setTimeout(() => {
-        alert('Demo mode: Server not available. Deploy backend for real downloads!');
+        alert('Demo file downloaded! In a real implementation, this would be the actual MP3 file.');
     }, 500);
 }
 
