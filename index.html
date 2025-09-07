@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube to MP3 Converter</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-rocket"></i> ION's Space Converter</h1>
+            <p>🚀 Convert YouTube videos to MP3 in the cosmos</p>
+        </header>
+
+        <main>
+            <div class="converter-box">
+                <div class="input-section">
+                    <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL here..." />
+                    <button id="convertBtn" onclick="startConversion()">
+                        <i class="fas fa-download"></i> Convert
+                    </button>
+                </div>
+
+                <div id="videoInfo" class="video-info hidden">
+                    <img id="thumbnail" src="" alt="Video thumbnail">
+                    <div class="info">
+                        <h3 id="videoTitle"></h3>
+                        <p id="videoDuration"></p>
+                    </div>
+                </div>
+
+                <div id="progressSection" class="progress-section hidden">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p id="progressText">Preparing download...</p>
+                </div>
+
+                <div id="downloadSection" class="download-section hidden">
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Conversion Complete!</h3>
+                    <button id="downloadBtn" class="download-btn">
+                        <i class="fas fa-download"></i> Download MP3
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Made with 🚀 by ION's Space • Demo Version</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
