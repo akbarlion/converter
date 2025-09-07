@@ -162,96 +162,85 @@ function setupDownloadButton(videoId, videoData) {
 async function processRealDownload(videoId, videoData) {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
-    // Try multiple converter APIs
-    const apis = [
-        {
-            name: 'RapidAPI YouTube MP3',
-            url: 'https://youtube-mp36.p.rapidapi.com/dl',
-            method: 'GET',
-            params: { id: youtubeUrl }
-        },
-        {
-            name: 'Y2mate API',
-            url: 'https://www.y2mate.com/mates/analyzeV2/ajax',
-            method: 'POST',
-            params: { k_query: youtubeUrl, k_page: 'home', hl: 'en', q_auto: 0 }
-        }
-    ];
+    updateProgress(30, 'Initializing converter...');
     
-    for (const api of apis) {
-        try {
-            updateProgress(50, `Trying ${api.name}...`);
+    // Use free converter service with smart approach
+    try {
+        // Method 1: Try cobalt.tools API (free)
+        updateProgress(50, 'Connecting to converter...');
+        
+        const cobaltResponse = await fetch('https://co.wuk.sh/api/json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                url: youtubeUrl,
+                vCodec: 'h264',
+                vQuality: '720',
+                aFormat: 'mp3',
+                isAudioOnly: true
+            })
+        });
+        
+        if (cobaltResponse.ok) {
+            const data = await cobaltResponse.json();
             
-            const response = await fetch(api.url, {
-                method: api.method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-RapidAPI-Key': 'demo-key', // User needs to replace
-                    'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
-                },
-                body: api.method === 'POST' ? JSON.stringify(api.params) : undefined
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
+            if (data.status === 'success' && data.url) {
+                updateProgress(90, 'Preparing download...');
                 
-                if (data.link || data.dlink) {
-                    const downloadUrl = data.link || data.dlink;
-                    updateProgress(90, 'Preparing download...');
-                    
-                    // Create hidden download link
-                    const link = document.createElement('a');
-                    link.href = downloadUrl;
-                    link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    updateProgress(100, 'Download started!');
-                    setTimeout(() => {
-                        alert('🎵 MP3 download started! Check your downloads folder.');
-                    }, 500);
-                    return;
-                }
+                // Direct download
+                const link = document.createElement('a');
+                link.href = data.url;
+                link.download = `${videoData.title.replace(/[^\w\s]/gi, '')}.mp3`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                updateProgress(100, 'Download started!');
+                setTimeout(() => {
+                    alert('🎵 MP3 download started! Check your downloads folder.');
+                }, 500);
+                return;
             }
-        } catch (error) {
-            console.log(`${api.name} failed:`, error);
-            continue;
         }
+    } catch (error) {
+        console.log('Cobalt API failed:', error);
     }
     
-    // If all APIs fail, use iframe approach
-    await useIframeConverter(videoId, videoData);
+    // Method 2: Smart redirect approach
+    await useSmartConverter(videoId, videoData);
 }
 
-async function useIframeConverter(videoId, videoData) {
-    updateProgress(70, 'Using alternative method...');
+async function useSmartConverter(videoId, videoData) {
+    updateProgress(70, 'Using smart converter...');
     
-    // Create hidden iframe for conversion
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
-    iframe.src = `https://ytmp3.cc/api/?url=https://youtube.com/watch?v=${videoId}`;
+    // Create a popup window that auto-closes
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const converterUrl = `https://ytmp3.cc/youtube-to-mp3/?url=${encodeURIComponent(youtubeUrl)}`;
     
-    document.body.appendChild(iframe);
+    // Open in small popup
+    const popup = window.open(
+        converterUrl,
+        'converter',
+        'width=800,height=600,scrollbars=yes,resizable=yes'
+    );
     
-    // Wait for iframe to load
-    await new Promise(resolve => {
-        iframe.onload = () => {
-            setTimeout(() => {
-                document.body.removeChild(iframe);
-                resolve();
-            }, 3000);
-        };
-    });
+    updateProgress(90, 'Opening converter...');
     
-    updateProgress(100, 'Processing complete!');
-    
-    // Show download instruction
+    // Auto-close popup after user likely downloaded
     setTimeout(() => {
-        alert('🚀 Conversion initiated! The download should start automatically. If not, please check your browser\'s download settings.');
+        if (popup && !popup.closed) {
+            popup.close();
+        }
+    }, 15000); // Close after 15 seconds
+    
+    updateProgress(100, 'Converter opened!');
+    
+    setTimeout(() => {
+        alert('🚀 Converter opened in popup! Click "Download" on the converter page. The popup will auto-close in 15 seconds.');
     }, 500);
 }
 
@@ -298,7 +287,7 @@ function createMockMP3Download(fileName) {
     
     // Show success message
     setTimeout(() => {
-        alert('⚠️ Fallback mode: Demo audio file downloaded. For real MP3 conversion, please add a valid API key.');
+        alert('⚠️ Fallback mode: Demo audio file downloaded. The converter service is temporarily unavailable.');
     }, 500);
 }
 
