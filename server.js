@@ -8,7 +8,12 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('.'));
+app.use(express.static(path.join(__dirname)));
+
+// Root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Get video info
 app.get('/api/info/:videoId', async (req, res) => {
@@ -58,6 +63,11 @@ function formatDuration(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-app.listen(PORT, () => {
-    console.log(`🚀 ION's Space Converter running on port ${PORT}`);
-});
+// For Vercel serverless functions
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`🚀 ION's Space Converter running on port ${PORT}`);
+    });
+}
+
+module.exports = app;

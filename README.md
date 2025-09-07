@@ -55,7 +55,7 @@ Just open `index.html` in browser - falls back to demo mode if backend unavailab
 
 Update `API_BASE` in `script.js`:
 ```javascript
-const API_BASE = 'https://your-vercel-app.vercel.app/api';
+const API_BASE = 'https://converter-nine-pi.vercel.app/';
 ```
 
 ## Note
